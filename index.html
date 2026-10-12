@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#08164a">
+    <title>Monitor Conexión Europa</title>
+    <style>
+        /* ── Monitor "Así viaja la información" ──
+           Pantalla pensada para un monitor 1920×1080: todo se dibuja en un escenario fijo
+           de 1920×1080 que se escala para ocupar la pantalla que haya. */
+        :root {
+            --eu-950: #050d2e;
+            --eu-900: #08164a;
+            --eu-800: #0c2170;
+            --eu-700: #123097;
+            --eu-600: #1d44c4;
+            --gold: #ffcc00;
+            --gold-soft: #ffe066;
+            --red: #e63946;
+            --green: #2fd27a;
+            --text: #f4f6ff;
+            --text-dim: #b8c2ec;
+            --line: rgba(255, 255, 255, 0.16);
+            --card: rgba(255, 255, 255, 0.06);
+            /* Color de cada origen de mensajes (bolitas, consola) */
+            --c-esp: #ffcc00;
+            --c-web: #4be08f;
+            --c-nr: #ff9f43;
+            --c-movil: #c792ea;
+            --c-control: #6fd3ff;
+            --c-espia: #ff6b81;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: var(--eu-950);
+        }
+
+        body {
+            font-family: 'Outfit', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text);
+        }
+
+        #stage {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 1920px;
+            height: 1080px;
+            transform: translate(-50%, -50%) scale(var(--s, 1));
+            transform-origin: center;
+            display: grid;
+            grid-template-columns: 1200px 1fr;
+            grid-template-rows: 72px 400px 1fr;
+            gap: 16px;
+            padding: 16px 24px 24px;
+            background-color: var(--eu-900);
+            background-image:
+                radial-gradient(ellipse 70% 50% at 30% 0%, rgba(29, 68, 196, 0.7) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 100% 100%, rgba(255, 204, 0, 0.08) 0%, transparent 70%),
+                linear-gradient(180deg, var(--eu-800) 0%, var(--eu-950) 100%);
+        }
+
+        /* ── Cabecera ── */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        header .logo {
+            height: 60px;
+            padding: 6px 10px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.35);
+        }
+
+        header h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 34px;
+            line-height: 1.05;
+        }
+
+        header .sub {
+            font-size: 17px;
+            color: var(--text-dim);
+            letter-spacing: 0.03em;
+        }
+
+        header .spacer { flex: 1; }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-size: 16px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .pill .dot { width: 10px; height: 10px; border-radius: 50%; background: #8590b5; }
+        .pill.ok .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+        .pill.mal .dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+
+        header button {
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            padding: 9px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        header button:hover { background: rgba(255, 255, 255, 0.14); border-color: var(--gold); }
+        header button.on { background: rgba(255, 204, 0, 0.18); border-color: var(--gold); color: var(--gold-soft); }
+        header button:disabled { opacity: 0.45; cursor: not-allowed; }
+        header button.primario {
+            background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+            color: var(--eu-900);
+            border-color: transparent;
+        }
+
+        #reloj {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--gold-soft);
+            min-width: 100px;
+            text-align: right;
+        }
+
+        /* ── Tarjetas ── */
+        .card {
+            position: relative;
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .card h2 {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            padding: 12px 20px 8px;
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .card h2 .hint {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dim);
+            letter-spacing: 0;
+        }
+
+        .card h2 .num { color: var(--gold); }
+
+        #cardSys { grid-column: 1; grid-row: 2; }
+        #cardNR { grid-column: 1; grid-row: 3; }
+
+        #colDer {
+            grid-column: 2;
+            grid-row: 2 / 4;
+            display: grid;
+            grid-template-rows: 330px 330px 1fr;
+            gap: 16px;
+            min-height: 0;
+        }
+
+        svg { display: block; overflow: visible; }
+
+        /* ── 1 · Esquema del sistema ── */
+        #svgSys { flex: 1; width: 100%; min-height: 0; }
+
+        .sys-wire {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.22);
+            stroke-width: 3;
+            stroke-dasharray: 2 9;
+            stroke-linecap: round;
+        }
+
+        .sys-wire.activo { stroke: rgba(255, 204, 0, 0.75); stroke-dasharray: none; }
+
+        .sys-box {
+            fill: rgba(12, 33, 112, 0.92);
+            stroke: rgba(255, 255, 255, 0.28);
+            stroke-width: 1.5;
+        }
+
+        .sys-broker {
+            fill: url(#gradBroker);
+            stroke: rgba(255, 204, 0, 0.6);
+            stroke-width: 2;
+        }
+
+        .hl { fill: none; stroke: var(--gold); stroke-width: 4; opacity: 0; }
+        .sys-icon { font-size: 28px; }
+        .sys-title { fill: #fff; font-size: 18px; font-weight: 700; }
+        .sys-sub { fill: var(--text-dim); font-size: 13.5px; }
+
+        #narracion {
+            margin: 0 16px 14px;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 18px;
+            border-radius: 14px;
+            background: rgba(5, 13, 46, 0.55);
+            border: 1px solid rgba(255, 204, 0, 0.35);
+            font-size: 19px;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+
+        #narracion .ahora {
+            flex: none;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--eu-900);
+            background: var(--gold);
+            border-radius: 6px;
+            padding: 3px 8px;
+        }
+
+        #narracion .texto { animation: aparecer 0.4s ease-out; }
+
+        /* ── 2 · Node-RED ── */
+        #nrWrap {
+            flex: 1;
+            margin: 0 16px;
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 0;
+            background-color: #fff;
+            background-image:
+                linear-gradient(#eef0f3 1px, transparent 1px),
+                linear-gradient(90deg, #eef0f3 1px, transparent 1px);
+            background-size: 20px 20px;
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+        }
+
+        #svgNR { width: 100%; height: 100%; }
+
+        .nr-wire { fill: none; stroke: #999; stroke-width: 3; }
+        .nr-wire.activo { stroke: #ff7f0e; }
+        .nr-node { stroke: #999; stroke-width: 1; }
+        .nr-iconbox { fill: rgba(0, 0, 0, 0.07); }
+        .nr-icon { font-size: 15px; }
+        .nr-label { fill: #333; font-size: 15px; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        .nr-port { fill: #d9d9d9; stroke: #999; stroke-width: 1; }
+        .nr-status { fill: #888; font-size: 13px; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        #svgNR .hl { stroke: #ff7f0e; stroke-width: 4; }
+
+        .leyenda {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 20px;
+            padding: 10px 20px 12px;
+            font-size: 14.5px;
+            color: var(--text-dim);
+        }
+
+        .leyenda span { display: inline-flex; align-items: center; gap: 7px; }
+        .leyenda i { width: 22px; height: 14px; border-radius: 3px; border: 1px solid #999; }
+        .leyenda b { color: var(--text); font-weight: 700; }
+
+        /* ── Bolitas (mensajes que viajan) ── */
+        .pk-lab-bg { fill: rgba(5, 13, 46, 0.92); stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+        .pk-lab { fill: #fff; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; }
+        .pk-emoji { font-size: 26px; }
+        #svgNR .pk-lab-bg { fill: #fff; stroke: #ff7f0e; }
+        #svgNR .pk-lab { fill: #333; }
+
+        /* ── 3 · Partida ── */
+        .partida { padding: 4px 20px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+
+        .jugador {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 28px;
+            font-weight: 800;
+            min-height: 40px;
+        }
+
+        .jugador .nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .jugador .nombre.vacio { color: var(--text-dim); font-weight: 500; font-size: 22px; }
+        .jugador .estado { font-size: 14px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); white-space: nowrap; }
+        .jugador .estado.jugando { background: rgba(47, 210, 122, 0.2); color: #8ff0bb; }
+        .jugador .estado.fin { background: rgba(255, 204, 0, 0.2); color: var(--gold-soft); }
+        .jugador .cola { font-size: 14px; font-weight: 600; color: var(--text-dim); white-space: nowrap; }
+
+        .ciudades { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+
+        .ciudad {
+            padding: 9px 4px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .ciudad small { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; }
+
+        .ciudad.on {
+            color: var(--eu-900);
+            background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+            border: 1px solid var(--gold);
+            box-shadow: 0 0 18px rgba(255, 204, 0, 0.5);
+            animation: pop 0.5s ease-out;
+        }
+
+        .abajo { display: grid; grid-template-columns: 250px 1fr; gap: 14px; flex: 1; min-height: 0; }
+        .datos { display: grid; grid-template-rows: repeat(3, 1fr); gap: 8px; }
+
+        .dato {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--line);
+        }
+
+        .dato span { font-size: 14px; color: var(--text-dim); font-weight: 600; }
+        .dato b { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: #fff; }
+        .dato.record b { color: var(--gold-soft); font-size: 17px; text-align: right; }
+
+        .top5 { list-style: none; display: flex; flex-direction: column; gap: 5px; font-size: 15px; }
+        .top5 h3 { font-size: 14px; color: var(--text-dim); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+        .top5 li { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; align-items: center; padding: 3px 10px 3px 4px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); }
+        .top5 li .p { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--eu-600); font-weight: 800; font-size: 12px; }
+        .top5 li:nth-of-type(1) .p { background: var(--gold); color: var(--eu-900); }
+        .top5 li .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+        .top5 li .pts { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--gold-soft); }
+        .top5 .vacio { color: var(--text-dim); font-size: 14px; }
+
+        /* ── 4 · Email ── */
+        .email-meta {
+            margin: 0 20px;
+            padding: 8px 14px;
+            border-radius: 12px 12px 0 0;
+            background: #e9edf5;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .email-meta b { color: #0b3d91; }
+        .email-meta .asunto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .email-vista {
+            position: relative;
+            flex: 1;
+            margin: 0 20px 16px;
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            background: #f0f4f8;
+            min-height: 0;
+        }
+
+        .email-vista iframe {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 600px;
+            height: 1500px;
+            border: 0;
+            transform-origin: top center;
+            transform: translateX(-50%) scale(0.9);
+            pointer-events: none;
+            animation: leerEmail 40s ease-in-out infinite alternate;
+        }
+
+        .email-vacio {
+            flex: 1;
+            margin: 0 20px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 17px;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .email-vacio .big { font-size: 46px; }
+        .email-nuevo { animation: sobre 0.7s ease-out; }
+
+        /* ── 5 · Consola MQTT ── */
+        #consola {
+            list-style: none;
+            flex: 1;
+            margin: 0 16px 14px;
+            padding: 6px 10px;
+            border-radius: 12px;
+            background: rgba(2, 6, 24, 0.75);
+            border: 1px solid var(--line);
+            overflow: hidden;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 14px;
+            min-height: 0;
+        }
+
+        #consola li {
+            display: grid;
+            grid-template-columns: 74px 64px 150px 1fr;
+            gap: 8px;
+            align-items: center;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            white-space: nowrap;
+            animation: aparecer 0.35s ease-out;
+        }
+
+        #consola .h { color: #7f8bb8; }
+        #consola .r { font-family: 'Outfit', sans-serif; }
+        #consola .t { overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+        #consola .v { overflow: hidden; text-overflow: ellipsis; color: #dfe5ff; }
+        #consola .tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-right: 8px; background: rgba(255, 255, 255, 0.12); color: var(--text-dim); }
+        #consola li.ret { opacity: 0.55; }
+        #consola li.vacia { display: block; color: var(--text-dim); font-family: 'Outfit', sans-serif; border: 0; }
+
+        /* ── Cinta de demostración ── */
+        #cintaDemo {
+            position: absolute;
+            top: 84px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            padding: 6px 22px;
+            border-radius: 999px;
+            background: var(--gold);
+            color: var(--eu-900);
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            box-shadow: 0 6px 24px rgba(255, 204, 0, 0.45);
+            animation: latir 2s ease-in-out infinite;
+        }
+
+        .oculto { display: none !important; }
+
+        /* Banderas dibujadas con CSS (Windows no pinta los emojis de bandera) */
+        .flag { display: inline-block; width: 30px; height: 20px; border-radius: 3px; vertical-align: middle; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); }
+        .flag.it { background: linear-gradient(90deg, #009246 33.3%, #fff 33.3% 66.6%, #ce2b37 66.6%); }
+        .flag.es { background: linear-gradient(180deg, #aa151b 25%, #f1bf00 25% 75%, #aa151b 75%); }
+        header button .flag { width: 22px; height: 15px; margin-right: 6px; vertical-align: -2px; }
+
+        #nota {
+            position: absolute;
+            right: 28px;
+            bottom: 4px;
+            font-size: 12px;
+            color: rgba(184, 194, 236, 0.6);
+        }
+
+        @keyframes aparecer { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+        @keyframes pop { 0% { transform: scale(0.7); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        @keyframes sobre { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: none; } }
+        @keyframes latir { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes leerEmail {
+            0%, 12% { transform: translateX(-50%) scale(0.9) translateY(0); }
+            88%, 100% { transform: translateX(-50%) scale(0.9) translateY(-1040px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .email-vista iframe { animation: none; }
+            #cintaDemo { animation: none; }
+        }
+    </style>
+</head>
+<body>
+<div id="stage">
+    <header>
+        <img class="logo" src="img/logo.png" alt="Logo" onerror="this.style.display='none'">
+        <div>
+            <h1 data-t="titulo"></h1>
+            <div class="sub" data-t="subtitulo"></div>
+        </div>
+        <div class="spacer"></div>
+        <span class="pill" id="estadoConexion"><span class="dot"></span><span id="estadoTexto"></span></span>
+        <button id="btnDemo" class="primario" data-t="btnDemo"></button>
+        <button id="btnLenta" data-t="btnLenta"></button>
+        <button id="btnAuto" data-t="btnAuto"></button>
+        <button id="btnIdioma"></button>
+        <button id="btnPantalla" title="Pantalla completa">⛶</button>
+        <div id="reloj">--:--</div>
+    </header>
+
+    <div id="cintaDemo" class="oculto" data-t="cintaDemo"></div>
+
+    <!-- 1 · El sistema -->
+    <section class="card" id="cardSys">
+        <h2><span><span class="num">1 ·</span> <span data-t="card1"></span></span><span class="hint" data-t="card1hint"></span></h2>
+        <svg id="svgSys" viewBox="0 0 1200 330" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="narracion"><span class="ahora" data-t="ahora"></span><span class="texto" id="narrTexto"></span></div>
+    </section>
+
+    <!-- 2 · Node-RED por dentro -->
+    <section class="card" id="cardNR">
+        <h2><span><span class="num">2 ·</span> <span data-t="card2"></span></span><span class="hint" data-t="card2hint"></span></h2>
+        <div id="nrWrap"><svg id="svgNR" viewBox="150 40 950 435" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <div class="leyenda" id="leyenda"></div>
+    </section>
+
+    <div id="colDer">
+        <!-- 3 · Partida en directo -->
+        <section class="card">
+            <h2><span><span class="num">3 ·</span> <span data-t="card3"></span></span></h2>
+            <div class="partida">
+                <div class="jugador">
+                    <span id="pBandera"></span>
+                    <span class="nombre" id="pNombre"></span>
+                    <span class="cola" id="pCola"></span>
+                    <span class="estado oculto" id="pEstado"></span>
+                </div>
+                <div class="ciudades" id="pCiudades"></div>
+                <div class="abajo">
+                    <div class="datos">
+                        <div class="dato"><span data-t="tiempo"></span><b id="pTiempo">--:--.--</b></div>
+                        <div class="dato"><span data-t="puntos"></span><b id="pPuntos">---</b></div>
+                        <div class="dato record"><span data-t="record"></span><b id="pRecord">---</b></div>
+                    </div>
+                    <ol class="top5" id="pTop5"></ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4 · El email -->
+        <section class="card" id="cardEmail">
+            <h2><span><span class="num">4 ·</span> <span data-t="card4"></span></span><span class="hint" data-t="card4hint"></span></h2>
+            <div id="emailZona" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+        </section>
+
+        <!-- 5 · Consola MQTT -->
+        <section class="card">
+            <h2><span><span class="num">5 ·</span> <span data-t="card5"></span></span><span class="hint">sanjealcantarilla/#</span></h2>
+            <ul id="consola"></ul>
+        </section>
+    </div>
+
+    <div id="nota" data-t="nota"></div>
+</div>
+
+<script src="js/mqtt.min.js"></script>
+<script>
+// ═════════════════════════════════════════════════════════════════════════════
+//  Monitor "Así viaja la información"
+//  Se suscribe a sanjealcantarilla/# en el mismo broker que el juego y dibuja
+//  cada mensaje real viajando por el sistema y por el flujo de Node-RED.
+//  No publica nada: solo escucha (la demostración es local y no sale al broker).
+// ═════════════════════════════════════════════════════════════════════════════
+
+const PREFIX = 'sanjealcantarilla/';
+const BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
+const URL_JUEGO = 'https://bsrtorres.github.io/conexion-europa/';
+const URL_FOTOS = 'https://sites.google.com/murciaeduca.es/electronicasanje';
+const DEMO_INACTIVIDAD_MS = 120000; // demo automática tras 2 minutos sin partidas
+
+// ── Textos ES / IT ──────────────────────────────────────────────────────────
+const TX = {
+    es: {
+        titulo: 'Así viaja la información',
+        subtitulo: 'Conexión Europa · Monitor en directo de MQTT y Node-RED',
+        conectando: 'Conectando…', conectado: 'Conectado a broker.emqx.io', desconectado: 'Sin conexión',
+        btnDemo: '▶ Simular partida', btnLenta: '🐢 Cámara lenta', btnAuto: '🔁 Demo automática',
+        cintaDemo: 'MODO DEMOSTRACIÓN · datos simulados que no se envían',
+        card1: 'El sistema', card1hint: 'Cada bolita es un mensaje MQTT que viaja ahora mismo',
+        card2: 'Node-RED por dentro', card2hint: 'El flujo real de FlowFuse · los tópicos empiezan por sanjealcantarilla/',
+        card3: 'Partida en directo', card4: 'El email', card4hint: 'el que recibe el jugador',
+        card5: 'Mensajes MQTT', ahora: 'Ahora',
+        nota: 'Reconstrucción en directo a partir de los mensajes MQTT · los emails se muestran ocultos por privacidad',
+        sys: {
+            ldr: ['Sensores de luz', '5 LDR en el mapa'], esp: ['ESP32', 'lee los sensores'],
+            movil: ['Móvil', 'inscripción (QR)'], broker: ['Broker MQTT', 'broker.emqx.io'],
+            juego: ['Web del juego', 'pantalla de la feria'], espia: ['Espía', 'Operación Europa'],
+            control: ['Control', 'iluminación'], nr: ['Node-RED', 'FlowFuse'],
+            gmail: ['Gmail', 'servidor SMTP'], jugador: ['Jugador', 'bandeja de entrada']
+        },
+        leyenda: [['mqtt in', 'recibe del broker'], ['join', 'junta varios mensajes'], ['function', 'código JavaScript'],
+                  ['mqtt out', 'publica en el broker'], ['e-mail', 'envía el correo'], ['debug', 'muestra datos'], ['inject', 'botón manual']],
+        esperando: 'Esperando jugador…', jugando: '🎮 Jugando', terminado: '🏁 Terminado', enCola: n => `⏳ ${n} en cola`,
+        tiempo: 'Tiempo', puntos: 'Puntos', record: 'Récord', top5: 'Top 5', sinResultados: 'Aún no hay resultados',
+        ciudades: ['Madrid', 'Roma', 'París', 'Atenas', 'Oslo'], sensor: 'sensor',
+        emailVacio: 'Todavía no ha salido ningún email',
+        emailVacio2: 'Cuando alguien termina, Node-RED junta sus 5 datos y le envía este correo.',
+        de: 'De', para: 'Para', asunto: 'Asunto', deValor: 'Node-RED · Gmail',
+        consolaVacia: 'Esperando mensajes…', retenido: 'retenido',
+        st: { conectado: 'conectado', desconectado: 'desconectado', enviando: 'enviando…', enviado: 'enviado ✓' },
+        n: {
+            espera: 'Esperando a que alguien juegue… Pulsa «▶ Simular partida» para ver un ejemplo.',
+            cola: n => `📱 ${n} se inscribe desde el móvil: su nombre viaja al broker y la pantalla del juego lo pone en la cola.`,
+            colaSale: '🖥️ Le toca jugar: la pantalla borra su entrada de la cola (un mensaje vacío retenido).',
+            nombre: n => `🖥️ Empieza la partida de ${n}: la web publica su nombre. Node-RED lo recibe y lo guarda en los dos nodos «join».`,
+            email: '🖥️ La web publica el email del jugador (aquí lo ocultamos). Node-RED lo necesita para enviarle el correo.',
+            idioma: i => `🖥️ La web publica el idioma (${i}): así Node-RED escribirá el correo en ${i === 'it' ? 'italiano' : 'español'}.`,
+            fotos: '🖼️ El jugador mira las 6 fotos… el cronómetro empieza después.',
+            numero: (n, c) => `💡 El sensor ${n} detecta la luz del puntero → el ESP32 publica «numeros = ${n}» → la web marca ${c}.`,
+            tiempo: t => `⏱️ ¡Las 5 ciudades! La web para el cronómetro y publica el tiempo: ${t}.`,
+            puntuacion: p => `⭐ …y la puntuación: ${p} puntos. Node-RED ya tiene todos los datos que necesita.`,
+            join2: '⚙️ «join ×2» ha juntado nombre + puntuación → la función «ganadores» actualiza el récord y el Top 5.',
+            join5: '⚙️ «join ×5» ha juntado los 5 datos → la función «enviar email» escribe el correo en el idioma del jugador.',
+            enviado: '📧 El nodo «e-mail» lo envía por Gmail (SMTP) y llega a la bandeja de entrada del jugador.',
+            top5: '🏆 Node-RED publica el nuevo Top 5 (retenido) → todas las pantallas lo actualizan a la vez.',
+            reset: '🔄 Alguien ha pulsado «Reset récord» en Node-RED: se borra el Top 5.',
+            ganador: n => `🥇 ¡Nuevo récord de ${n}! Node-RED publica el nombre del ganador…`,
+            ganadorPts: p => `🥇 …y sus puntos: ${p}.`,
+            umbral: v => `🎛️ La página de Control cambia el umbral de los sensores a ${v} → el ESP32 lo recibe al momento.`,
+            espia: t => `🕵️ La pantalla del Espía publica en «${t}».`,
+            otro: t => `📨 Mensaje en «${t}».`,
+            demoInicio: '▶ Demostración: una partida simulada de principio a fin.',
+            demoFin: '✅ Fin de la demostración. ¡Ahora te toca a ti!'
+        }
+    },
+    it: {
+        titulo: 'Come viaggia l\'informazione',
+        subtitulo: 'Connessione Europa · Monitor in diretta di MQTT e Node-RED',
+        conectando: 'Connessione…', conectado: 'Connesso a broker.emqx.io', desconectado: 'Non connesso',
+        btnDemo: '▶ Simula partita', btnLenta: '🐢 Rallentatore', btnAuto: '🔁 Demo automatica',
+        cintaDemo: 'MODALITÀ DEMO · dati simulati che non vengono inviati',
+        card1: 'Il sistema', card1hint: 'Ogni pallina è un messaggio MQTT che viaggia in questo momento',
+        card2: 'Node-RED dentro', card2hint: 'Il flusso reale di FlowFuse · i topic iniziano con sanjealcantarilla/',
+        card3: 'Partita in diretta', card4: 'L\'email', card4hint: 'quella che riceve il giocatore',
+        card5: 'Messaggi MQTT', ahora: 'Ora',
+        nota: 'Ricostruzione in diretta dai messaggi MQTT · le email sono nascoste per privacy',
+        sys: {
+            ldr: ['Sensori di luce', '5 LDR sulla mappa'], esp: ['ESP32', 'legge i sensori'],
+            movil: ['Cellulare', 'iscrizione (QR)'], broker: ['Broker MQTT', 'broker.emqx.io'],
+            juego: ['Web del gioco', 'schermo della fiera'], espia: ['Spia', 'Operazione Europa'],
+            control: ['Controllo', 'illuminazione'], nr: ['Node-RED', 'FlowFuse'],
+            gmail: ['Gmail', 'server SMTP'], jugador: ['Giocatore', 'posta in arrivo']
+        },
+        leyenda: [['mqtt in', 'riceve dal broker'], ['join', 'unisce più messaggi'], ['function', 'codice JavaScript'],
+                  ['mqtt out', 'pubblica sul broker'], ['e-mail', 'invia l\'email'], ['debug', 'mostra i dati'], ['inject', 'pulsante manuale']],
+        esperando: 'In attesa del giocatore…', jugando: '🎮 In gioco', terminado: '🏁 Finito', enCola: n => `⏳ ${n} in coda`,
+        tiempo: 'Tempo', puntos: 'Punti', record: 'Record', top5: 'Top 5', sinResultados: 'Ancora nessun risultato',
+        ciudades: ['Madrid', 'Roma', 'Parigi', 'Atene', 'Oslo'], sensor: 'sensore',
+        emailVacio: 'Non è ancora partita nessuna email',
+        emailVacio2: 'Quando qualcuno finisce, Node-RED unisce i suoi 5 dati e gli invia questa email.',
+        de: 'Da', para: 'A', asunto: 'Oggetto', deValor: 'Node-RED · Gmail',
+        consolaVacia: 'In attesa di messaggi…', retenido: 'conservato',
+        st: { conectado: 'connesso', desconectado: 'disconnesso', enviando: 'invio…', enviado: 'inviata ✓' },
+        n: {
+            espera: 'In attesa che qualcuno giochi… Premi «▶ Simula partita» per vedere un esempio.',
+            cola: n => `📱 ${n} si iscrive dal cellulare: il suo nome viaggia fino al broker e lo schermo del gioco lo mette in coda.`,
+            colaSale: '🖥️ Tocca a lui/lei: lo schermo cancella la sua voce dalla coda (un messaggio vuoto conservato).',
+            nombre: n => `🖥️ Inizia la partita di ${n}: la web pubblica il nome. Node-RED lo riceve e lo conserva nei due nodi «join».`,
+            email: '🖥️ La web pubblica l\'email del giocatore (qui la nascondiamo). A Node-RED serve per inviargli il messaggio.',
+            idioma: i => `🖥️ La web pubblica la lingua (${i}): così Node-RED scriverà l'email in ${i === 'it' ? 'italiano' : 'spagnolo'}.`,
+            fotos: '🖼️ Il giocatore guarda le 6 foto… il cronometro parte dopo.',
+            numero: (n, c) => `💡 Il sensore ${n} rileva la luce del puntatore → l'ESP32 pubblica «numeros = ${n}» → la web segna ${c}.`,
+            tiempo: t => `⏱️ Tutte e 5 le città! La web ferma il cronometro e pubblica il tempo: ${t}.`,
+            puntuacion: p => `⭐ …e il punteggio: ${p} punti. Node-RED ha già tutti i dati che gli servono.`,
+            join2: '⚙️ «join ×2» ha unito nome + punteggio → la funzione «ganadores» aggiorna il record e la Top 5.',
+            join5: '⚙️ «join ×5» ha unito i 5 dati → la funzione «enviar email» scrive l\'email nella lingua del giocatore.',
+            enviado: '📧 Il nodo «e-mail» la invia tramite Gmail (SMTP) e arriva nella posta del giocatore.',
+            top5: '🏆 Node-RED pubblica la nuova Top 5 (conservata) → tutti gli schermi la aggiornano insieme.',
+            reset: '🔄 Qualcuno ha premuto «Reset récord» in Node-RED: la Top 5 viene cancellata.',
+            ganador: n => `🥇 Nuovo record di ${n}! Node-RED pubblica il nome del vincitore…`,
+            ganadorPts: p => `🥇 …e i suoi punti: ${p}.`,
+            umbral: v => `🎛️ La pagina Controllo cambia la soglia dei sensori a ${v} → l'ESP32 la riceve subito.`,
+            espia: t => `🕵️ Lo schermo della Spia pubblica su «${t}».`,
+            otro: t => `📨 Messaggio su «${t}».`,
+            demoInicio: '▶ Dimostrazione: una partita simulata dall\'inizio alla fine.',
+            demoFin: '✅ Fine della dimostrazione. Ora tocca a te!'
+        }
+    }
+};
+
+let lang = 'es';
+try { lang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('monitorLang') || 'es'; } catch (e) {}
+if (!TX[lang]) lang = 'es';
+const t = () => TX[lang];
+
+// ── Plantilla del email (la misma que el nodo «enviar email» de Node-RED) ──
+const EMAIL_TEXTOS = {
+    es: n => ({
+        asunto: `🏆 ${n}, aquí tienes tus resultados - Semana de la Ciencia y la Tecnología 2026`,
+        feria: 'SEMANA DE LA CIENCIA Y LA TECNOLOGÍA 2026', titulo: '¡Misión completada! 🚀',
+        saludo: `Hola <strong>${n}</strong>:`,
+        intro: 'Gracias por visitar nuestro stand y aceptar el reto. Estos son tus resultados:',
+        tiempo: '⏱️ TIEMPO', minSeg: 'minutos:segundos', puntuacion: '⭐ PUNTUACIÓN', puntos: 'puntos',
+        reto: '¿Crees que puedes mejorar tu marca? ¡Enséñale el juego a tu familia y amigos!',
+        boton: '🎮 Volver a jugar', tecTitulo: '🔧 ¿Cómo funciona por dentro?',
+        tecIntro: 'Detrás de este reto hay tecnología real, la misma que se usa en la industria y en el Internet de las Cosas (IoT):',
+        tec: ['<strong>Sensores de luz</strong> que detectan tus acciones.', '<strong>Microcontroladores ESP32</strong> que leen los sensores.',
+              '<strong>Raspberry Pi</strong> como centro de control.', '<strong>Conexión WiFi y MQTT</strong> para que todos los dispositivos se comuniquen.',
+              '<strong>FlowFuse (Node-RED)</strong>, que gestiona los datos y te ha enviado este correo.', '<strong>HTML, CSS y JavaScript</strong> para crear el juego web.',
+              '<strong>GitHub</strong>, que aloja y publica el juego en internet.', '<strong>Claude</strong>, inteligencia artificial de Anthropic, como apoyo en la programación.'],
+        fotosTitulo: '¡Recuerdos del evento!',
+        fotos: 'Las fotografías estarán disponibles en la web del Departamento de Electrónica del IES SANJE:',
+        despedida: '¡Esperamos que lo hayas disfrutado! Vuelve cuando quieras para seguir aprendiendo. 💡',
+        firma: 'Un saludo,<br><strong>Alumnado de 2º de Instalaciones de Telecomunicaciones</strong>'
+    }),
+    it: n => ({
+        asunto: `🏆 ${n}, ecco i tuoi risultati - Settimana della Scienza e della Tecnologia 2026`,
+        feria: 'SETTIMANA DELLA SCIENZA E DELLA TECNOLOGIA 2026', titulo: 'Missione compiuta! 🚀',
+        saludo: `Ciao <strong>${n}</strong>,`,
+        intro: 'Grazie per aver visitato il nostro stand e aver accettato la sfida. Ecco i tuoi risultati:',
+        tiempo: '⏱️ TEMPO', minSeg: 'minuti:secondi', puntuacion: '⭐ PUNTEGGIO', puntos: 'punti',
+        reto: 'Pensi di poter migliorare il tuo risultato? Fai provare il gioco alla tua famiglia e ai tuoi amici!',
+        boton: '🎮 Gioca di nuovo', tecTitulo: '🔧 Come funziona?',
+        tecIntro: 'Dietro questa sfida c\'è tecnologia reale, la stessa che si usa nell\'industria e nell\'Internet delle Cose (IoT):',
+        tec: ['<strong>Sensori di luce</strong> che rilevano le tue azioni.', '<strong>Microcontrollori ESP32</strong> che leggono i sensori.',
+              '<strong>Raspberry Pi</strong> come centro di controllo.', '<strong>Connessione WiFi e MQTT</strong> per far comunicare tutti i dispositivi.',
+              '<strong>FlowFuse (Node-RED)</strong>, che gestisce i dati e ti ha inviato questa email.', '<strong>HTML, CSS e JavaScript</strong> per creare il gioco web.',
+              '<strong>GitHub</strong>, che ospita e pubblica il gioco su internet.', '<strong>Claude</strong>, intelligenza artificiale di Anthropic, come supporto alla programmazione.'],
+        fotosTitulo: 'Ricordi dell\'evento!',
+        fotos: 'Le fotografie saranno disponibili sul sito del Dipartimento di Elettronica dell\'IES SANJE:',
+        despedida: 'Speriamo che ti sia divertito/a! Torna quando vuoi per continuare a imparare. 💡',
+        firma: 'Un saluto,<br><strong>Gli studenti del 2º anno di Impianti di Telecomunicazione</strong>'
+    })
+};
+
+// Lo que llega del broker público lo escribe cualquiera: siempre se escapa antes de meterlo en HTML
+function escapar(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function ocultarEmail(e) {
+    const [u, d] = String(e || '').split('@');
+    if (!d) return '•••';
+    return (u ? u[0] : '') + '•••@' + d;
+}
+
+function ocultarEmailsEnTexto(s) {
+    return String(s).replace(/[^\s"'@,{}:]+@[^\s"'@,{}]+/g, ocultarEmail);
+}
+
+function plantillaEmail(d) {
+    const idioma = d.idioma === 'it' ? 'it' : 'es';
+    const tx = EMAIL_TEXTOS[idioma](escapar(d.nombre));
+    return `<!DOCTYPE html><html lang="${idioma}"><head><meta charset="UTF-8"></head>
+<body style="margin:0; padding:0; background-color:#f0f4f8; font-family:Arial, sans-serif; color:#333;">
+  <div style="max-width:600px; margin:0 auto; background-color:#ffffff;">
+    <div style="background-color:#0b3d91; color:#ffffff; padding:30px 20px; text-align:center;">
+      <p style="margin:0; font-size:14px; letter-spacing:2px;">${tx.feria}</p>
+      <h1 style="margin:10px 0 0; font-size:26px;">${tx.titulo}</h1>
+    </div>
+    <div style="padding:25px 20px; line-height:1.6;">
+      <p>${tx.saludo}</p>
+      <p>${tx.intro}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr>
+        <td width="50%" style="padding:5px;"><div style="background-color:#e8f0fe; border-radius:8px; padding:15px; text-align:center;">
+          <p style="margin:0; font-size:13px; color:#555;">${tx.tiempo}</p>
+          <p style="margin:5px 0 0; font-size:28px; font-weight:bold; color:#0b3d91;">${escapar(d.tiempo)}</p>
+          <p style="margin:0; font-size:12px; color:#777;">${tx.minSeg}</p></div></td>
+        <td width="50%" style="padding:5px;"><div style="background-color:#fff4e5; border-radius:8px; padding:15px; text-align:center;">
+          <p style="margin:0; font-size:13px; color:#555;">${tx.puntuacion}</p>
+          <p style="margin:5px 0 0; font-size:28px; font-weight:bold; color:#e67e00;">${escapar(d.puntuacion)}</p>
+          <p style="margin:0; font-size:12px; color:#777;">${tx.puntos}</p></div></td>
+      </tr></table>
+      <p>${tx.reto}</p>
+      <p style="text-align:center; margin:20px 0;"><a href="${URL_JUEGO}" style="display:inline-block; background-color:#e67e00; color:#ffffff; padding:12px 28px; text-decoration:none; border-radius:6px; font-weight:bold;">${tx.boton}</a></p>
+      <h3 style="color:#0b3d91; border-bottom:2px solid #e8f0fe; padding-bottom:5px;">${tx.tecTitulo}</h3>
+      <p>${tx.tecIntro}</p>
+      <ul style="padding-left:20px;">${tx.tec.map(i => `<li>${i}</li>`).join('')}</ul>
+      <div style="background-color:#f9f9f9; border:1px dashed #ccc; border-radius:8px; padding:15px; margin-top:25px;">
+        <p style="margin:0 0 8px;">📸 <strong>${tx.fotosTitulo}</strong></p>
+        <p style="margin:0;">${tx.fotos}<br><a href="${URL_FOTOS}" style="color:#0b3d91;">${URL_FOTOS}</a></p>
+      </div>
+      <p style="margin-top:25px;">${tx.despedida}</p>
+    </div>
+    <div style="background-color:#f0f4f8; padding:20px; text-align:center; font-size:13px; color:#666;">
+      <p style="margin:0;">${tx.firma}<br>IES SANJE · Alcantarilla (Murcia)</p>
+    </div>
+  </div>
+</body></html>`;
+}
+
+// ── Utilidades SVG ──────────────────────────────────────────────────────────
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+}
+
+function defsBrillo(svg, id) {
+    const defs = el('defs', {}, svg);
+    const f = el('filter', { id, x: '-100%', y: '-100%', width: '300%', height: '300%' }, defs);
+    el('feGaussianBlur', { stdDeviation: 4, result: 'b' }, f);
+    const m = el('feMerge', {}, f);
+    el('feMergeNode', { in: 'b' }, m);
+    el('feMergeNode', { in: 'SourceGraphic' }, m);
+    return defs;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  1 · Esquema del sistema
+// ═════════════════════════════════════════════════════════════════════════════
+const svgSys = document.getElementById('svgSys');
+const SYS = {
+    ldr:     { x: 95,   y: 70,  icon: '💡' },
+    esp:     { x: 300,  y: 70,  icon: '🔌' },
+    movil:   { x: 200,  y: 265, icon: '📱' },
+    broker:  { x: 560,  y: 165, icon: '☁️', big: true },
+    juego:   { x: 900,  y: 45,  icon: '🖥️' },
+    espia:   { x: 900,  y: 125, icon: '🕵️' },
+    control: { x: 900,  y: 205, icon: '🎛️' },
+    nr:      { x: 700,  y: 290, icon: '⚙️' },
+    gmail:   { x: 905,  y: 290, icon: '📮' },
+    jugador: { x: 1105, y: 290, icon: '📬' }
+};
+const CABLES = [
+    ['ldr', 'esp'], ['esp', 'broker'], ['movil', 'broker'], ['broker', 'juego'], ['broker', 'espia'],
+    ['broker', 'control'], ['broker', 'nr'], ['nr', 'gmail'], ['gmail', 'jugador']
+];
+
+(function dibujarSistema() {
+    const defs = defsBrillo(svgSys, 'brilloSys');
+    const g = el('radialGradient', { id: 'gradBroker', cx: '50%', cy: '35%', r: '70%' }, defs);
+    el('stop', { offset: '0%', 'stop-color': '#2a56e0' }, g);
+    el('stop', { offset: '100%', 'stop-color': '#0c2170' }, g);
+
+    const capaCables = el('g', {}, svgSys);
+    const capaNodos = el('g', {}, svgSys);
+    el('g', { class: 'pk-layer' }, svgSys);
+
+    CABLES.forEach(([a, b]) => {
+        const A = SYS[a], B = SYS[b];
+        el('path', { id: `p-${a}-${b}`, class: 'sys-wire', d: `M${A.x} ${A.y} L${B.x} ${B.y}` }, capaCables);
+    });
+
+    for (const id in SYS) {
+        const n = SYS[id];
+        const grupo = el('g', { id: 'sys-' + id, transform: `translate(${n.x} ${n.y})` }, capaNodos);
+        if (n.big) {
+            el('circle', { r: 68, class: 'sys-broker' }, grupo);
+            el('circle', { r: 68, class: 'hl' }, grupo);
+            el('text', { class: 'sys-icon', 'text-anchor': 'middle', y: -12, 'font-size': 40 }, grupo).textContent = n.icon;
+            el('text', { class: 'sys-title', 'text-anchor': 'middle', y: 26 }, grupo);
+            el('text', { class: 'sys-sub', 'text-anchor': 'middle', y: 46 }, grupo);
+        } else {
+            el('rect', { x: -90, y: -30, width: 180, height: 60, rx: 14, class: 'sys-box' }, grupo);
+            el('rect', { x: -90, y: -30, width: 180, height: 60, rx: 14, class: 'hl' }, grupo);
+            el('text', { class: 'sys-icon', x: -64, y: 10, 'text-anchor': 'middle' }, grupo).textContent = n.icon;
+            el('text', { class: 'sys-title', x: -40, y: -3 }, grupo);
+            el('text', { class: 'sys-sub', x: -40, y: 17 }, grupo);
+        }
+    }
+})();
+
+function textosSistema() {
+    for (const id in SYS) {
+        const g = document.getElementById('sys-' + id);
+        const [titulo, sub] = t().sys[id];
+        g.querySelector('.sys-title').textContent = titulo;
+        g.querySelector('.sys-sub').textContent = id === 'control' && latido.luz !== null
+            ? `☀️ ${latido.luz} · umbral ${latido.umbral ?? '–'}` : sub;
+    }
+}
+
+// Camino del sistema entre dos cajas (en cualquier sentido)
+function cable(a, b) {
+    let p = document.getElementById(`p-${a}-${b}`);
+    if (p) return { path: p, rev: false };
+    p = document.getElementById(`p-${b}-${a}`);
+    return { path: p, rev: true };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  2 · Flujo de Node-RED (posiciones y conexiones del flujo real exportado)
+// ═════════════════════════════════════════════════════════════════════════════
+const svgNR = document.getElementById('svgNR');
+const NR_COLOR = { 'mqtt in': '#d8bfd8', 'mqtt out': '#d8bfd8', function: '#fdd0a2', join: '#e2d96e', 'e-mail': '#c7e9c0', debug: '#87a980', inject: '#a6bbcf' };
+const NR_ICONO = { 'mqtt in': '📥', 'mqtt out': '📤', function: 'ƒ', join: '🔗', 'e-mail': '✉️', debug: '🐞', inject: '👆' };
+const NR_ICONO_DCHA = ['mqtt out', 'e-mail', 'debug'];
+const NR_SIN_ENTRADA = ['mqtt in', 'inject'];
+
+const NR = [
+    { id: 'in_nombre',     tipo: 'mqtt in',  label: 'nombre',           x: 250, y: 100, out: [['j5', 'j2']] },
+    { id: 'in_tiempo',     tipo: 'mqtt in',  label: 'tiempo',           x: 240, y: 200, out: [['j5']] },
+    { id: 'in_email',      tipo: 'mqtt in',  label: 'email',            x: 240, y: 300, out: [['j5']] },
+    { id: 'in_puntuacion', tipo: 'mqtt in',  label: 'puntuacion',       x: 260, y: 400, out: [['j5', 'j2']] },
+    { id: 'in_idioma',     tipo: 'mqtt in',  label: 'idioma',           x: 240, y: 500, out: [['j5']] },
+    { id: 'j5',            tipo: 'join',     label: 'join ×5',          x: 590, y: 240, out: [['fn_email']] },
+    { id: 'j2',            tipo: 'join',     label: 'join ×2',          x: 570, y: 350, out: [['fn_gan', 'dbg']] },
+    { id: 'fn_email',      tipo: 'function', label: 'enviar email',     x: 750, y: 160, out: [['email']] },
+    { id: 'email',         tipo: 'e-mail',   label: 'e-mail (Gmail)',   x: 970, y: 160, out: [] },
+    { id: 'fn_gan',        tipo: 'function', label: 'ganadores',        x: 670, y: 450, out: [['out_gan'], ['out_pts'], ['out_top5']] },
+    { id: 'out_gan',       tipo: 'mqtt out', label: 'ganador',          x: 950, y: 460, out: [] },
+    { id: 'out_pts',       tipo: 'mqtt out', label: 'ganador/puntos',   x: 970, y: 540, out: [] },
+    { id: 'out_top5',      tipo: 'mqtt out', label: 'Top 5 (retenido)', x: 960, y: 620, out: [] },
+    { id: 'dbg',           tipo: 'debug',    label: 'debug 1',          x: 980, y: 340, out: [] },
+    { id: 'inj',           tipo: 'inject',   label: 'Reset récord',     x: 580, y: 660, out: [['fn_gan']] }
+];
+const NRmap = Object.fromEntries(NR.map(n => [n.id, n]));
+// El flujo real es muy alto: se aplana en vertical para que quepa (misma forma, menos altura)
+const nrY = y => Math.round(70 + (y - 100) * 0.68);
+
+(function dibujarNodeRED() {
+    defsBrillo(svgNR, 'brilloNR');
+    const capaCables = el('g', {}, svgNR);
+    const capaNodos = el('g', {}, svgNR);
+    el('g', { class: 'pk-layer' }, svgNR);
+
+    NR.forEach(n => {
+        n.w = Math.max(110, Math.round(n.label.length * 8.6 + 58));
+        n.h = n.out.length > 1 ? 16 * n.out.length + 8 : 34;
+        n.cy = nrY(n.y);
+        n.izq = n.x - n.w / 2;
+        n.arriba = n.cy - n.h / 2;
+    });
+
+    NR.forEach(n => n.out.forEach((destinos, i) => destinos.forEach(d => {
+        const T = NRmap[d];
+        const x1 = n.izq + n.w, y1 = n.arriba + (i + 1) * n.h / (n.out.length + 1);
+        const x2 = T.izq, y2 = T.cy;
+        const dx = Math.max(50, Math.abs(x2 - x1) * 0.5);
+        el('path', { id: `w-${n.id}-${i}-${d}`, class: 'nr-wire', d: `M${x1} ${y1} C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}` }, capaCables);
+    })));
+
+    NR.forEach(n => {
+        const g = el('g', { id: 'nr-' + n.id, transform: `translate(${n.izq} ${n.arriba})` }, capaNodos);
+        el('rect', { width: n.w, height: n.h, rx: 5, fill: NR_COLOR[n.tipo], class: 'nr-node' }, g);
+        const dcha = NR_ICONO_DCHA.includes(n.tipo);
+        el('rect', { x: dcha ? n.w - 30 : 0, width: 30, height: n.h, rx: 5, class: 'nr-iconbox' }, g);
+        el('text', { class: 'nr-icon', x: dcha ? n.w - 15 : 15, y: n.h / 2, 'text-anchor': 'middle', 'dominant-baseline': 'central' }, g).textContent = NR_ICONO[n.tipo];
+        el('text', { class: 'nr-label', x: dcha ? 12 : 40, y: n.h / 2, 'dominant-baseline': 'central' }, g).textContent = n.label;
+        el('rect', { width: n.w, height: n.h, rx: 5, class: 'hl' }, g);
+        if (!NR_SIN_ENTRADA.includes(n.tipo)) el('rect', { x: -5, y: n.h / 2 - 5, width: 10, height: 10, rx: 2, class: 'nr-port' }, g);
+        n.out.forEach((_, i) => el('rect', { x: n.w - 5, y: (i + 1) * n.h / (n.out.length + 1) - 5, width: 10, height: 10, rx: 2, class: 'nr-port' }, g));
+        const st = el('g', { class: 'nr-st', transform: `translate(2 ${n.h + 14})` }, g);
+        el('rect', { x: 0, y: -5, width: 9, height: 9, rx: 2, fill: 'none' }, st);
+        el('text', { class: 'nr-status', x: 15, y: 0, 'dominant-baseline': 'central' }, st);
+    });
+})();
+
+// Estado (texto bajo el nodo, como en el editor de Node-RED). Se guarda como función para poder cambiar de idioma
+const estadosNR = {};
+const COLOR_ESTADO = { green: '#2fa84f', yellow: '#e6b800', blue: '#2b7bd6', grey: '#aaa', red: '#d33' };
+function estadoNR(id, fnTexto, color = 'grey', anillo = false) {
+    estadosNR[id] = fnTexto ? { fnTexto, color, anillo } : null;
+    pintarEstadoNR(id);
+}
+function pintarEstadoNR(id) {
+    const g = document.querySelector(`#nr-${id} .nr-st`);
+    const s = estadosNR[id];
+    const r = g.querySelector('rect'), txt = g.querySelector('text');
+    if (!s) { r.setAttribute('fill', 'none'); r.setAttribute('stroke', 'none'); txt.textContent = ''; return; }
+    const c = COLOR_ESTADO[s.color] || s.color;
+    r.setAttribute('fill', s.anillo ? '#fff' : c);
+    r.setAttribute('stroke', c);
+    r.setAttribute('stroke-width', s.anillo ? 2 : 0);
+    txt.textContent = s.fnTexto();
+}
+
+function leyenda() {
+    document.getElementById('leyenda').innerHTML = t().leyenda.map(([tipo, txt]) =>
+        `<span><i style="background:${NR_COLOR[tipo]}"></i><b>${tipo}</b> ${escapar(txt)}</span>`).join('');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Animación: bolitas que viajan, destellos y cola de escenas
+// ═════════════════════════════════════════════════════════════════════════════
+const ABORT = Symbol('abort');
+let gen = 0;          // cambia al cancelar una demo: las animaciones en curso se cortan
+let lenta = false;
+const tareas = [];
+let corriendo = false;
+let esperandoCola = [];
+
+function factor() {
+    // Si se acumulan mensajes, se acelera para no quedarse atrás del juego real
+    return (lenta ? 2 : 1) * (tareas.length > 4 ? 0.35 : 1);
+}
+
+function dormir(ms) {
+    const g0 = gen;
+    return new Promise((res, rej) => setTimeout(() => (g0 === gen ? res() : rej(ABORT)), ms * factor()));
+}
+
+function encolar(fn) {
+    tareas.push(fn);
+    if (!corriendo) correr();
+}
+
+async function correr() {
+    corriendo = true;
+    while (tareas.length) {
+        const fn = tareas.shift();
+        try { await fn(); } catch (e) { if (e !== ABORT) console.error(e); }
+    }
+    corriendo = false;
+    esperandoCola.splice(0).forEach(r => r());
+}
+
+function colaVacia() {
+    return corriendo || tareas.length ? new Promise(r => esperandoCola.push(r)) : Promise.resolve();
+}
+
+function bolita(path, { rev = false, label = '', emoji = '', color = '#ffcc00', dur = 900, r = 9 } = {}) {
+    const g0 = gen;
+    return new Promise((resolve, reject) => {
+        const svg = path.ownerSVGElement;
+        const g = el('g', {}, svg.querySelector('.pk-layer'));
+        if (emoji) {
+            el('text', { class: 'pk-emoji', 'text-anchor': 'middle', 'dominant-baseline': 'central' }, g).textContent = emoji;
+        } else {
+            el('circle', { r, fill: color, filter: `url(#${svg.id === 'svgNR' ? 'brilloNR' : 'brilloSys'})` }, g);
+        }
+        if (label) {
+            const lab = el('g', {}, g);
+            const fondo = el('rect', { class: 'pk-lab-bg', rx: 8, height: 26, y: -44 }, lab);
+            const txt = el('text', { class: 'pk-lab', 'text-anchor': 'middle', y: -26 }, lab);
+            txt.textContent = label.length > 38 ? label.slice(0, 37) + '…' : label;
+            const w = txt.getComputedTextLength() + 20;
+            fondo.setAttribute('x', -w / 2);
+            fondo.setAttribute('width', w);
+        }
+        path.classList.add('activo');
+        const L = path.getTotalLength();
+        const D = dur * factor();
+        const t0 = performance.now();
+        function paso(ahora) {
+            if (g0 !== gen) { g.remove(); path.classList.remove('activo'); return reject(ABORT); }
+            const p = Math.min(1, (ahora - t0) / D);
+            const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+            const pt = path.getPointAtLength(L * (rev ? 1 - e : e));
+            g.setAttribute('transform', `translate(${pt.x} ${pt.y})`);
+            if (p < 1) requestAnimationFrame(paso);
+            else { g.remove(); path.classList.remove('activo'); resolve(); }
+        }
+        requestAnimationFrame(paso);
+    });
+}
+
+function destello(elemId) {
+    const hl = document.querySelector(`#${elemId} .hl`);
+    if (hl) hl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 1100, easing: 'ease-out' });
+}
+
+// Mensaje por el esquema del sistema: de una caja a otra
+async function viaje(a, b, opts = {}) {
+    const { path, rev } = cable(a, b);
+    await bolita(path, { ...opts, rev });
+    destello('sys-' + b);
+}
+
+// Mensaje por un cable de Node-RED
+async function viajeNR(desde, salida, hasta, opts = {}) {
+    destello('nr-' + desde);
+    await bolita(document.getElementById(`w-${desde}-${salida}-${hasta}`), { color: '#ff7f0e', r: 8, dur: 750, ...opts });
+    destello('nr-' + hasta);
+}
+
+let narracionActual = null;
+function narrar(clave, ...args) {
+    narracionActual = { clave, args };
+    pintarNarracion();
+}
+function pintarNarracion() {
+    const span = document.getElementById('narrTexto');
+    const v = narracionActual ? t().n[narracionActual.clave] : t().n.espera;
+    const nuevo = document.createElement('span');
+    nuevo.className = 'texto';
+    nuevo.id = 'narrTexto';
+    nuevo.textContent = typeof v === 'function' ? v(...narracionActual.args) : v;
+    span.replaceWith(nuevo);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Estado que se ve en pantalla
+// ═════════════════════════════════════════════════════════════════════════════
+let estado = nuevoEstado();
+function nuevoEstado() {
+    return {
+        partida: { nombre: null, idioma: null, ciudades: [], tiempo: null, puntos: null, fase: null },
+        top5: [],
+        record: { nombre: null, puntos: null },
+        cola: {},
+        joins: { j5: { n: 0, obj: {}, total: 5 }, j2: { n: 0, obj: {}, total: 2 } },
+        email: null,
+        estadosNR: {}
+    };
+}
+
+const latido = { luz: null, umbral: null };
+
+function pintarPartida() {
+    const p = estado.partida, tx = t();
+    const nom = document.getElementById('pNombre');
+    nom.textContent = p.nombre || tx.esperando;
+    nom.classList.toggle('vacio', !p.nombre);
+    document.getElementById('pBandera').innerHTML = p.idioma === 'it' || p.idioma === 'es' ? `<span class="flag ${p.idioma}"></span>` : '';
+    const est = document.getElementById('pEstado');
+    est.classList.toggle('oculto', !p.fase);
+    est.className = 'estado' + (p.fase ? (p.fase === 'fin' ? ' fin' : ' jugando') : ' oculto');
+    est.textContent = p.fase === 'fin' ? tx.terminado : tx.jugando;
+    const enCola = Object.keys(estado.cola).length;
+    document.getElementById('pCola').textContent = enCola ? tx.enCola(enCola) : '';
+
+    document.getElementById('pCiudades').innerHTML = tx.ciudades.map((c, i) =>
+        `<div class="ciudad${p.ciudades.includes(i + 1) ? ' on' : ''}">${c}<small>${tx.sensor} ${i + 1}</small></div>`).join('');
+
+    document.getElementById('pTiempo').textContent = p.tiempo || '--:--.--';
+    document.getElementById('pPuntos').textContent = p.puntos ?? '---';
+    const r = estado.record;
+    document.getElementById('pRecord').textContent = r.puntos != null ? `${r.puntos} · ${r.nombre || ''}` : '---';
+    pintarTop5();
+}
+
+function pintarTop5() {
+    const ol = document.getElementById('pTop5');
+    ol.innerHTML = '';
+    const h = document.createElement('h3');
+    h.textContent = '🥇 ' + t().top5;
+    ol.appendChild(h);
+    if (!estado.top5.length) {
+        const li = document.createElement('div');
+        li.className = 'vacio';
+        li.textContent = t().sinResultados;
+        ol.appendChild(li);
+        return;
+    }
+    estado.top5.slice(0, 5).forEach((j, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="p">${i + 1}</span><span class="n"></span><span class="pts"></span>`;
+        li.querySelector('.n').textContent = j.nombre;
+        li.querySelector('.pts').textContent = j.puntos;
+        ol.appendChild(li);
+    });
+}
+
+function pintarEmail(nuevo = false) {
+    const zona = document.getElementById('emailZona');
+    const d = estado.email, tx = t();
+    zona.innerHTML = '';
+    if (!d) {
+        zona.innerHTML = `<div class="email-vacio"><div class="big">📭</div><b></b><span></span></div>`;
+        zona.querySelector('b').textContent = tx.emailVacio;
+        zona.querySelector('span').textContent = tx.emailVacio2;
+        return;
+    }
+    const idioma = d.idioma === 'it' ? 'it' : 'es';
+    const meta = document.createElement('div');
+    meta.className = 'email-meta' + (nuevo ? ' email-nuevo' : '');
+    meta.innerHTML = `<div><b></b> <span class="de"></span> &nbsp;·&nbsp; <b></b> <span class="para"></span></div><div class="asunto"><b></b> <span class="as"></span></div>`;
+    const bs = meta.querySelectorAll('b');
+    bs[0].textContent = tx.de + ':';
+    bs[1].textContent = tx.para + ':';
+    bs[2].textContent = tx.asunto + ':';
+    meta.querySelector('.de').textContent = tx.deValor;
+    meta.querySelector('.para').textContent = ocultarEmail(d.email);
+    // El asunto va en el idioma del jugador, como el correo real
+    meta.querySelector('.as').textContent = EMAIL_TEXTOS[idioma](d.nombre).asunto;
+    const vista = document.createElement('div');
+    vista.className = 'email-vista' + (nuevo ? ' email-nuevo' : '');
+    const ifr = document.createElement('iframe');
+    ifr.setAttribute('sandbox', '');
+    ifr.setAttribute('tabindex', '-1');
+    ifr.srcdoc = plantillaEmail(d);
+    vista.appendChild(ifr);
+    zona.append(meta, vista);
+}
+
+// ── Consola ──
+const consola = document.getElementById('consola');
+const RUTAS = {
+    web: ['🖥️→☁️', 'var(--c-web)'], esp: ['🔌→☁️', 'var(--c-esp)'], movil: ['📱→☁️', 'var(--c-movil)'],
+    nr: ['⚙️→☁️', 'var(--c-nr)'], control: ['🎛️→☁️', 'var(--c-control)'], espia: ['🕵️→☁️', 'var(--c-espia)'], otro: ['?→☁️', '#aaa']
+};
+function origen(k, payload) {
+    if (['nombre', 'email', 'idioma', 'tiempo', 'puntuacion'].includes(k)) return 'web';
+    if (k.startsWith('cola/')) return payload === '' ? 'web' : 'movil';
+    if (['numeros', 'luzambiente', 'ajuste_umbral'].includes(k)) return 'esp';
+    if (['top5', 'ganador', 'ganador/puntos'].includes(k)) return 'nr';
+    if (k === 'umbral') return 'control';
+    if (k.startsWith('espia/') || k.startsWith('reset/')) return 'espia';
+    return 'otro';
+}
+
+function apuntar(k, payload, { retenido = false, demo = false } = {}) {
+    const vacia = consola.querySelector('.vacia');
+    if (vacia) vacia.remove();
+    const [ruta, color] = RUTAS[origen(k, payload)];
+    const li = document.createElement('li');
+    if (retenido) li.className = 'ret';
+    const ahora = new Date();
+    li.innerHTML = `<span class="h"></span><span class="r"></span><span class="t"></span><span class="v"></span>`;
+    li.querySelector('.h').textContent = ahora.toLocaleTimeString('es-ES', { hour12: false });
+    li.querySelector('.r').textContent = ruta;
+    const tt = li.querySelector('.t');
+    tt.textContent = k;
+    tt.style.color = color;
+    const v = li.querySelector('.v');
+    if (retenido || demo) {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = demo ? 'DEMO' : t().retenido;
+        v.appendChild(tag);
+    }
+    v.appendChild(document.createTextNode(payload === '' ? '(vacío)' : ocultarEmailsEnTexto(payload)));
+    consola.prepend(li);
+    while (consola.children.length > 30) consola.lastChild.remove();
+}
+
+function consolaVacia() {
+    consola.innerHTML = '';
+    const li = document.createElement('li');
+    li.className = 'vacia';
+    li.textContent = t().consolaVacia;
+    consola.appendChild(li);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Escenas: qué se anima con cada mensaje
+// ═════════════════════════════════════════════════════════════════════════════
+const COLOR = { web: '#4be08f', esp: '#ffcc00', nr: '#ff9f43', movil: '#c792ea', control: '#6fd3ff', espia: '#ff6b81' };
+
+async function escena(k, p) {
+    if (k.startsWith('cola/')) return p ? escenaCola(k, p) : escenaColaSale(k);
+    if (['nombre', 'email', 'idioma', 'tiempo', 'puntuacion'].includes(k)) return escenaWeb(k, p);
+    if (k === 'numeros') return escenaNumero(p);
+    if (k === 'top5') return escenaTop5(p);
+    if (k === 'ganador') return escenaGanador(p);
+    if (k === 'ganador/puntos') return escenaGanadorPts(p);
+    if (k === 'umbral') return escenaUmbral(p);
+    if (k.startsWith('espia/') || k.startsWith('reset/')) return escenaEspia(k);
+    narrar('otro', k);
+    destello('sys-broker');
+    await dormir(600);
+}
+
+async function escenaCola(k, p) {
+    let j = {};
+    try { j = JSON.parse(p) || {}; } catch (e) {}
+    narrar('cola', j.nombre || '?');
+    await viaje('movil', 'broker', { color: COLOR.movil, label: `cola/… = ${j.nombre || '?'}` });
+    await viaje('broker', 'juego', { color: COLOR.movil, label: 'cola' });
+    estado.cola[k] = true;
+    pintarPartida();
+    await dormir(300);
+}
+
+async function escenaColaSale(k) {
+    narrar('colaSale');
+    delete estado.cola[k];
+    pintarPartida();
+    await viaje('juego', 'broker', { color: COLOR.web, label: 'cola/… = (vacío)', dur: 700 });
+}
+
+async function escenaWeb(k, p) {
+    const visible = k === 'email' ? ocultarEmail(p) : p;
+    const P = estado.partida;
+    if (k === 'nombre') {
+        estado.partida = { nombre: p, idioma: null, ciudades: [], tiempo: null, puntos: null, fase: 'jugando' };
+        narrar('nombre', p);
+    } else if (k === 'email') narrar('email');
+    else if (k === 'idioma') { P.idioma = p; narrar('idioma', p); }
+    else if (k === 'tiempo') { P.tiempo = p; narrar('tiempo', p); }
+    else if (k === 'puntuacion') { P.puntos = p; P.fase = 'fin'; narrar('puntuacion', p); }
+    pintarPartida();
+
+    destello('sys-juego');
+    await viaje('juego', 'broker', { color: COLOR.web, label: `${k} = ${visible}` });
+    await viaje('broker', 'nr', { color: COLOR.web, label: k });
+
+    // Dentro de Node-RED: el «mqtt in» de ese tópico lo reparte a sus «join»
+    const nodo = 'in_' + k;
+    const destinos = NRmap[nodo].out[0];
+    await Promise.all(destinos.map(d => viajeNR(nodo, 0, d, { label: k })));
+    for (const d of destinos) await meterEnJoin(d, k, p);
+}
+
+// Igual que el nodo join del flujo (modo manual, objeto clave/valor, se dispara al llegar a N mensajes)
+async function meterEnJoin(id, k, v) {
+    const j = estado.joins[id];
+    j.obj[k] = v;
+    j.n++;
+    if (j.n < j.total) {
+        const n = j.n, claves = Object.keys(j.obj).join(', ');
+        estadoNR(id, () => `${n}/${j.total}: ${claves}`, 'blue', true);
+        return;
+    }
+    const obj = { ...j.obj };
+    j.n = 0;
+    j.obj = {};
+    estadoNR(id, () => `${j.total}/${j.total} ✓`, 'green');
+    if (id === 'j5') await completarJ5(obj);
+    else await completarJ2(obj);
+}
+
+async function completarJ5(obj) {
+    narrar('join5');
+    await viajeNR('j5', 0, 'fn_email', { label: '{ 5 datos }' });
+    await dormir(400);
+    await viajeNR('fn_email', 0, 'email', { label: '✉️ HTML' });
+    estadoNR('email', () => t().st.enviando, 'yellow', true);
+    destello('sys-nr');
+    await viaje('nr', 'gmail', { emoji: '✉️', dur: 1000 });
+    narrar('enviado');
+    await viaje('gmail', 'jugador', { emoji: '✉️', dur: 1000 });
+    estado.email = { ...obj };
+    pintarEmail(true);
+    estadoNR('email', () => t().st.enviado, 'green');
+    await dormir(800);
+}
+
+async function completarJ2(obj) {
+    narrar('join2');
+    await Promise.all([
+        viajeNR('j2', 0, 'fn_gan', { label: '{ nombre, puntuacion }' }),
+        viajeNR('j2', 0, 'dbg')
+    ]);
+    const nom = obj.nombre, pts = parseInt(obj.puntuacion, 10) || 0;
+    estadoNR('dbg', () => `{ nombre: "${nom}", puntuacion: ${pts} }`, 'grey');
+    const rec = estado.record.puntos;
+    if (rec == null || pts > rec) estadoNR('fn_gan', () => `¡Nuevo Récord: ${pts}!`, 'green');
+    else estadoNR('fn_gan', () => `Récord actual: ${rec}`, 'blue', true);
+    await dormir(500);
+}
+
+async function escenaNumero(p) {
+    const n = parseInt(p, 10);
+    const ciudad = t().ciudades[n - 1] || `#${p}`;
+    narrar('numero', n, ciudad);
+    destello('sys-ldr');
+    await viaje('ldr', 'esp', { emoji: '✨', dur: 600 });
+    await viaje('esp', 'broker', { color: COLOR.esp, label: `numeros = ${p}` });
+    await Promise.all([
+        viaje('broker', 'juego', { color: COLOR.esp, label: 'numeros' }),
+        viaje('broker', 'espia', { color: COLOR.esp })
+    ]);
+    const P = estado.partida;
+    if (n >= 1 && n <= 5 && !P.ciudades.includes(n)) P.ciudades.push(n);
+    pintarPartida();
+}
+
+async function salidaNR(salida, nodo, label) {
+    await viajeNR('fn_gan', salida, nodo, { label });
+    destello('sys-nr');
+    await viaje('nr', 'broker', { color: COLOR.nr, label });
+    await viaje('broker', 'juego', { color: COLOR.nr, label });
+}
+
+async function escenaTop5(p) {
+    let lista = [];
+    try { lista = JSON.parse(p) || []; } catch (e) {}
+    if (!Array.isArray(lista)) lista = [];
+    if (lista.length === 0) {
+        narrar('reset');
+        await viajeNR('inj', 0, 'fn_gan', { label: 'reset' });
+    } else narrar('top5');
+    await salidaNR(2, 'out_top5', 'top5');
+    estado.top5 = lista;
+    pintarPartida();
+}
+
+async function escenaGanador(p) {
+    narrar('ganador', p);
+    await salidaNR(0, 'out_gan', `ganador = ${p}`);
+    estado.record.nombre = p;
+    pintarPartida();
+}
+
+async function escenaGanadorPts(p) {
+    narrar('ganadorPts', p);
+    await salidaNR(1, 'out_pts', `ganador/puntos = ${p}`);
+    estado.record.puntos = parseInt(p, 10);
+    const rec = estado.record.puntos;
+    estadoNR('fn_gan', () => `Récord actual: ${rec}`, 'blue', true);
+    pintarPartida();
+}
+
+async function escenaUmbral(p) {
+    narrar('umbral', p);
+    await viaje('control', 'broker', { color: COLOR.control, label: `umbral = ${p}` });
+    await viaje('broker', 'esp', { color: COLOR.control, label: 'umbral' });
+    latido.umbral = p;
+    textosSistema();
+}
+
+async function escenaEspia(k) {
+    narrar('espia', k);
+    await viaje('espia', 'broker', { color: COLOR.espia, label: k });
+}
+
+// Lecturas periódicas del ESP32 (cada 2 s): pulso pequeño que no entra en la cola ni en la consola
+let latidoEnCurso = false;
+function recibirLatido(k, p) {
+    if (k === 'luzambiente') latido.luz = p;
+    else latido.umbral = p;
+    textosSistema();
+    if (latidoEnCurso) return;
+    latidoEnCurso = true;
+    viaje('esp', 'broker', { color: COLOR.control, r: 5, dur: 650 })
+        .then(() => viaje('broker', 'control', { color: COLOR.control, r: 5, dur: 650 }))
+        .catch(() => {})
+        .finally(() => { latidoEnCurso = false; });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Entrada de mensajes (reales o de la demo)
+// ═════════════════════════════════════════════════════════════════════════════
+let ultimaActividad = Date.now();
+
+function recibir(topic, payload, { retenido = false, demo = false } = {}) {
+    const k = topic.startsWith(PREFIX) ? topic.slice(PREFIX.length) : topic;
+    if (k === 'luzambiente' || k === 'ajuste_umbral') {
+        if (!demo) recibirLatido(k, payload);
+        return;
+    }
+    if (!demo && !retenido) {
+        ultimaActividad = Date.now();
+        if (demoActual) cancelarDemo(); // llega una partida de verdad: manda lo real
+    }
+    apuntar(k, payload, { retenido, demo });
+    if (retenido) return estadoRetenido(k, payload);
+    encolar(() => escena(k, payload));
+}
+
+// Mensajes retenidos que el broker entrega al conectarse: solo actualizan el estado, sin animación
+function estadoRetenido(k, p) {
+    if (k === 'top5') { try { estado.top5 = JSON.parse(p) || []; } catch (e) {} }
+    else if (k === 'ganador') estado.record.nombre = p;
+    else if (k === 'ganador/puntos') {
+        estado.record.puntos = parseInt(p, 10);
+        const rec = estado.record.puntos;
+        if (!isNaN(rec)) estadoNR('fn_gan', () => `Récord actual: ${rec}`, 'blue', true);
+    }
+    else if (k.startsWith('cola/')) { if (p) estado.cola[k] = true; else delete estado.cola[k]; }
+    else if (k === 'umbral') { latido.umbral = p; textosSistema(); }
+    pintarPartida();
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Demostración (local: nada se publica en el broker)
+// ═════════════════════════════════════════════════════════════════════════════
+let demoActual = null;
+let finUltimaDemo = 0;
+let demoAuto = true;
+try { demoAuto = localStorage.getItem('monitorAuto') !== 'no'; } catch (e) {}
+
+function foto() {
+    return {
+        estado: JSON.parse(JSON.stringify(estado)),
+        estadosNR: { ...estadosNR }
+    };
+}
+
+function restaurar(f) {
+    estado = f.estado;
+    for (const id in NRmap) { estadosNR[id] = f.estadosNR[id] || null; pintarEstadoNR(id); }
+    narracionActual = null;
+    pintarNarracion();
+    pintarPartida();
+    pintarEmail();
+}
+
+function finDemo(d) {
+    if (demoActual !== d) return;
+    demoActual = null;
+    restaurar(d.foto);
+    document.getElementById('cintaDemo').classList.add('oculto');
+    document.getElementById('btnDemo').disabled = false;
+    finUltimaDemo = Date.now();
+}
+
+function cancelarDemo() {
+    const d = demoActual;
+    gen++;
+    tareas.length = 0;
+    finDemo(d);
+}
+
+function formatoTiempo(ms) {
+    const s = Math.floor(ms / 1000);
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}.${String(Math.floor((ms % 1000) / 10)).padStart(2, '0')}`;
+}
+
+async function simular() {
+    if (demoActual) return;
+    const d = { foto: foto() };
+    demoActual = d;
+    const g0 = gen;
+    const sigue = () => { if (g0 !== gen || demoActual !== d) throw ABORT; };
+    const esperar = async ms => { await new Promise(r => setTimeout(r, ms * (lenta ? 2 : 1))); sigue(); };
+    const falso = (k, v) => recibir(PREFIX + k, v, { demo: true });
+
+    document.getElementById('cintaDemo').classList.remove('oculto');
+    document.getElementById('btnDemo').disabled = true;
+    // La demo empieza con los «join» vacíos y deja intactos el récord y el Top 5 reales
+    estado.joins = { j5: { n: 0, obj: {}, total: 5 }, j2: { n: 0, obj: {}, total: 2 } };
+    estadoNR('j5', () => '0/5', 'grey', true);
+    estadoNR('j2', () => '0/2', 'grey', true);
+    estadoNR('email', null);
+    estadoNR('dbg', null);
+
+    try {
+        const gente = [['Lucía', 'es'], ['Marco', 'it'], ['Pablo', 'es'], ['Giulia', 'it'], ['Carmen', 'es'], ['Luca', 'it']];
+        const [nombre, idioma] = gente[Math.floor(Math.random() * gente.length)];
+        const email = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') + '@ejemplo.com';
+        const id = 'demo' + Date.now().toString(36);
+
+        narrar('demoInicio');
+        await esperar(2500);
+        falso('cola/' + id, JSON.stringify({ id, nombre, email, idioma, t: Date.now() }));
+        await colaVacia(); sigue();
+        await esperar(1500);
+
+        falso('cola/' + id, '');
+        falso('nombre', nombre);
+        falso('email', email);
+        falso('idioma', idioma);
+        await colaVacia(); sigue();
+        narrar('fotos');
+        await esperar(3500);
+
+        for (const n of [1, 2, 3, 4, 5].sort(() => Math.random() - 0.5)) {
+            falso('numeros', String(n));
+            await esperar(1300 + Math.random() * 1200);
+        }
+        await colaVacia(); sigue();
+
+        const seg = 6 + Math.random() * 14;
+        const pts = Math.max(100, Math.round(1000 - 15 * seg)); // misma fórmula que el juego
+        falso('tiempo', formatoTiempo(seg * 1000));
+        falso('puntuacion', String(pts));
+        await colaVacia(); sigue();
+
+        // Lo que respondería Node-RED (función «ganadores»)
+        const top5 = [...estado.top5, { nombre, puntos: pts }].sort((a, b) => b.puntos - a.puntos).slice(0, 5);
+        if (estado.record.puntos == null || pts > estado.record.puntos) {
+            falso('ganador', nombre);
+            falso('ganador/puntos', String(pts));
+        }
+        falso('top5', JSON.stringify(top5));
+        await colaVacia(); sigue();
+
+        narrar('demoFin');
+        await esperar(9000);
+    } catch (e) {
+        if (e !== ABORT) console.error(e);
+    }
+    finDemo(d);
+}
+
+// Demo automática cuando nadie juega
+setInterval(() => {
+    const ahora = Date.now();
+    if (demoAuto && !demoActual && !corriendo && !tareas.length &&
+        ahora - ultimaActividad > DEMO_INACTIVIDAD_MS && ahora - finUltimaDemo > DEMO_INACTIVIDAD_MS) {
+        simular();
+    }
+}, 5000);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  MQTT (solo escucha)
+// ═════════════════════════════════════════════════════════════════════════════
+let conectado = null;
+function pintarConexion() {
+    const pill = document.getElementById('estadoConexion');
+    pill.classList.toggle('ok', conectado === true);
+    pill.classList.toggle('mal', conectado === false);
+    document.getElementById('estadoTexto').textContent =
+        conectado === true ? t().conectado : conectado === false ? t().desconectado : t().conectando;
+    NR.filter(n => n.tipo === 'mqtt in').forEach(n => estadoNR(n.id,
+        conectado ? () => t().st.conectado : () => t().st.desconectado, conectado ? 'green' : 'red', !conectado));
+}
+
+const client = mqtt.connect(BROKER_URL, { clientId: 'monitor_' + Math.random().toString(16).slice(2, 10), reconnectPeriod: 3000 });
+client.on('connect', () => {
+    conectado = true;
+    pintarConexion();
+    client.subscribe(PREFIX + '#');
+});
+client.on('close', () => { conectado = false; pintarConexion(); });
+client.on('offline', () => { conectado = false; pintarConexion(); });
+client.on('message', (topic, message, packet) => {
+    recibir(topic, message.toString(), { retenido: !!packet.retain });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Interfaz: idioma, botones, reloj, escalado
+// ═════════════════════════════════════════════════════════════════════════════
+function pintarTextos() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(e => { e.textContent = t()[e.dataset.t]; });
+    document.getElementById('btnIdioma').innerHTML = lang === 'es' ? '<span class="flag it"></span>Italiano' : '<span class="flag es"></span>Español';
+    document.getElementById('btnLenta').classList.toggle('on', lenta);
+    document.getElementById('btnAuto').classList.toggle('on', demoAuto);
+    textosSistema();
+    leyenda();
+    for (const id in NRmap) pintarEstadoNR(id);
+    pintarConexion();
+    pintarNarracion();
+    pintarPartida();
+    pintarEmail();
+    const vacia = consola.querySelector('.vacia');
+    if (vacia) vacia.textContent = t().consolaVacia;
+}
+
+document.getElementById('btnIdioma').addEventListener('click', () => {
+    lang = lang === 'es' ? 'it' : 'es';
+    try { localStorage.setItem('monitorLang', lang); } catch (e) {}
+    pintarTextos();
+});
+document.getElementById('btnDemo').addEventListener('click', () => simular());
+document.getElementById('btnLenta').addEventListener('click', () => { lenta = !lenta; pintarTextos(); });
+document.getElementById('btnAuto').addEventListener('click', () => {
+    demoAuto = !demoAuto;
+    try { localStorage.setItem('monitorAuto', demoAuto ? 'si' : 'no'); } catch (e) {}
+    pintarTextos();
+});
+document.getElementById('btnPantalla').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+});
+
+function reloj() {
+    document.getElementById('reloj').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+setInterval(reloj, 10000);
+reloj();
+
+function escalar() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    document.getElementById('stage').style.setProperty('--s', s);
+}
+window.addEventListener('resize', escalar);
+escalar();
+
+estadoNR('j5', () => '0/5', 'grey', true);
+estadoNR('j2', () => '0/2', 'grey', true);
+consolaVacia();
+pintarTextos();
+
+// index.html?demo → empieza directamente con una demostración
+if (new URLSearchParams(location.search).has('demo')) setTimeout(simular, 1500);
+</script>
+</body>
+</html>
